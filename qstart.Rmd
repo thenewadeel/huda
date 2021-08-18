@@ -1,0 +1,59 @@
+---
+title: "qstart"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(jsonlite)
+```
+
+## QuranDB
+
+Quran DB is a JSON object. Let's try to load it up.
+
+```{r}
+Quran <- fromJSON("arabicAyahs.json")   ### causes error
+Surahs <- fromJSON("surat.json")
+#fatiha<-Q[1]$surat[1]
+```
+Now we get surat list as Quran. Let's see what does this variable contain.
+
+```{r}
+str(Quran)
+```
+```{r}
+arabicText<-Quran$ayahs
+str(arabicText)
+names(arabicText)
+fatiha<-filter(arabicText,surat_id == 1)
+fatiha
+
+```
+Surah Fatiha is now loaded.
+Time to count the alphabet... let's see now
+```{r}
+f_text<-fatiha$text
+gsub(pattern=" ",x=f_text,replacement="",fixed = TRUE)
+nchar(gsub(pattern=" ",x=f_text,replacement="",fixed = TRUE))
+#words1<-strsplit(f_text[1],split=" ")
+#words1
+#nchar(words1)
+```
+Omitting spaces with `gsub` we get some numbers for surah fatiha's ayahs.
+
+Now to load up all of the Quranic Text...
+
+```{r}
+f_text<-arabicText$text
+#gsub(pattern=" ",x=f_text,replacement="",fixed = TRUE)
+ayah_word_count<-nchar(gsub(pattern=" ",x=f_text,replacement="",fixed = TRUE))
+plot(ayah_word_count)
+max(ayah_word_count)
+sum(ayah_word_count)
+mean(ayah_word_count)
+mode(ayah_word_count)
+median(ayah_word_count)
+tail(sort(ayah_word_count))
+```
