@@ -1,59 +1,86 @@
 ---
-title: "qstart"
+title: "Project Al-Huda"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **Al-Quran** - _An Introduction_
+
+**Al-Quran** is the last holy book to have been revealed to mankind by Allah almighty.
+It is known by many names and is revered by the entire Muslim world as the word of the Creator.
+Prophet Muhammad (SAW) received this text through angel Jibrael (Gabriel) and it was later written by his companions.
+It is the last divine book which was revealed to the last Prophet (SAW).
+The revelation is in Arabic language and despite being 1400 years old it's language is still fresh and recognized.
+
+The text is divided into 114 chapters known as Surahs.
+These surahs are categorized as Meccan and Medinan based on their location of revelation to Prophet Muhammad (SAW). Furthermore the ayahs in surahs are grouped into rakus.
+
+## Objectives
+
+The goal of this project is to study Al-Quran from the perspective of a data scientist and explore the tools of R language along the way.
+
+## Required Data
+
+_**Al-Quran text**_
+
+*   Obtained from [Al-Quran Cloud API](https://alquran.cloud/api).
+The obtained files are in JSON formatand include metadata along with the required text. Further info can be obtained from referenced API endpoint.
+
+In order to simplify, after reading the API documentation, I reduced the dataset and only included the following :
+
+* Arabic Uthmani Text
+* Simplified Arabic Text
+* English Translation (Saheeh International)
+* Surah list containing Surah metadata
+
+
+## First Steps and Loading up Data
+
+In order to load up JSON data as an R dataframe I used `jsonlite`. 
+
+```{r include=FALSE}
 library(dplyr)
 library(jsonlite)
+library(ggplot2)
 ```
 
-## QuranDB
-
-Quran DB is a JSON object. Let's try to load it up.
+Firstly lets load up the surah list into
 
 ```{r}
-Quran <- fromJSON("arabicAyahs.json")   ### causes error
 Surahs <- fromJSON("surat.json")
+Surahs<-Surahs$surat # The actual data is in the sub-object "surat"
 #fatiha<-Q[1]$surat[1]
 ```
-Now we get surat list as Quran. Let's see what does this variable contain.
-
+We get surah list as `Surahs`. Let's see what does this variable contains.
 ```{r}
-str(Quran)
+str(Surahs)
+summary(Surahs)
 ```
-```{r}
-arabicText<-Quran$ayahs
-str(arabicText)
-names(arabicText)
-fatiha<-filter(arabicText,surat_id == 1)
-fatiha
+The dataframe contains the following details :
 
-```
-Surah Fatiha is now loaded.
-Time to count the alphabet... let's see now
-```{r}
-f_text<-fatiha$text
-gsub(pattern=" ",x=f_text,replacement="",fixed = TRUE)
-nchar(gsub(pattern=" ",x=f_text,replacement="",fixed = TRUE))
-#words1<-strsplit(f_text[1],split=" ")
-#words1
-#nchar(words1)
-```
-Omitting spaces with `gsub` we get some numbers for surah fatiha's ayahs.
+*   `id`    -   the serial no of the surah from 1 to 114
+*   `name`  -   the arabic name of the surah
+*   `englishName`     -   English transliteration of `name`
+*   `englishTranslation`    -   `name` translated into english
+*   `revelationCity`    -   contains Meccan or Medinan
+*   `numberOfAyats`     -   number of verses in the surah
 
-Now to load up all of the Quranic Text...
-
+Now is the time for data cleanup, however at the moment all I can think of is converting `revelationCity` to factor instead of char.
 ```{r}
-f_text<-arabicText$text
-#gsub(pattern=" ",x=f_text,replacement="",fixed = TRUE)
-ayah_word_count<-nchar(gsub(pattern=" ",x=f_text,replacement="",fixed = TRUE))
-plot(ayah_word_count)
-max(ayah_word_count)
-sum(ayah_word_count)
-mean(ayah_word_count)
-mode(ayah_word_count)
-median(ayah_word_count)
-tail(sort(ayah_word_count))
+Surahs$revelationCity<-as.factor(Surahs$revelationCity)
+#str(Surahs)
 ```
+## Plotting Surahs
+
+```{r out.width="100%"}
+ggplot(data=Surahs,aes(x=id,y=numberOfAyats,fill=revelationCity))+
+  geom_bar(stat="identity")+
+  #geom_text(aes(label=name), color="black", size=5.5)+
+  theme_minimal()
+```
+This is our first plot. On the X-axis the `id` represents the ser no of the surahs from 1 to 114. On the Y-axis the `numberOfAyats` controls the bar height. The colors of the bars indicate `revelationCity`, either **Meccan** or **Medinan**.
+
+This marks the end of first session. 
