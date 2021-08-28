@@ -1,0 +1,110 @@
+---
+title: "Project Al-Huda"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+# TODO
+#https://www.youtube.com/watch?v=0cToDzeDLRI
+
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(jsonlite)
+library(ggplot2)
+library(plotly)
+Surahs <- fromJSON("surat.json")
+Surahs<-Surahs$surat # The actual data is in the sub-object "surat"
+Surahs$revelationCity<-as.factor(Surahs$revelationCity)
+
+```
+
+> In continuation from [Session 1](https://rpubs.com/glasschakotra/huda1)
+
+```{r out.width="100%", include=FALSE}
+ggplot(data = Surahs, aes(x = id, y = numberOfAyats,color=numberOfAyats)) +
+  geom_point(alpha=1)+
+  geom_line(alpha=0.3)+
+  facet_wrap(facets = vars(revelationCity))+
+  labs(title = "Lengths of Surahs",
+         x = "Surah No",
+         y = "Number of Ayats") 
+
+makki<-filter(Surahs,revelationCity=="Meccan")
+madni<-filter(Surahs,revelationCity=="Medinan")
+
+p1<-ggplot(data = Surahs, aes(x = id, y = numberOfAyats,color=numberOfAyats %% 2)) +
+  geom_point(alpha=1)+
+  geom_line(alpha=0.3)+
+  facet_grid(rows = vars(revelationCity),cols=vars(numberOfAyats %% 2))+
+  labs(title = "Lengths of Surahs",
+         x = "Surah No",
+         y = "Number of Ayats (Odd / Even)") 
+ggplotly(p1)
+
+# tilted labels
+# theme_bw() +
+#     theme(axis.text.x = element_text(colour = "grey20", size = 12, angle = 90, hjust = 0.5, vjust = 0.5),
+#                         axis.text.y = element_text(colour = "grey20", size = 12),
+#                         strip.text = element_text(face = "italic"),
+#                         text = element_text(size = 16))
+#ggplot(data=Surahs,aes(x=id,y=numberOfAyats,fill=revelationCity))+
+ # geom_bar(stat="identity")+
+  #geom_text(aes(label=name), color="black", size=5.5)+
+  #theme_minimal()
+```
+
+```{r out.width="100%"}
+Arabic <- fromJSON("arabicAyahsSimple.json")
+# DATA CLEANUP
+Arabic<-Arabic$ayahs
+Arabic$id<-NULL
+Arabic$edition_id<-NULL
+Arabic$page_id<-NULL
+Arabic$hizbQuarter_id<-NULL
+#Arabic$id<-NULL
+str(Arabic)
+Arabic$text[1]
+nchar(Arabic$text[1])
+Arabic$chars<-nchar(Arabic$text)
+str(Arabic)
+summary(Arabic)
+ggplot(data = Arabic, aes(x=surat_id, y = chars,color=manzil_id)) +
+  geom_point(alpha=0.3)+
+  #geom_line(alpha=0.3)+
+  #facet_wrap(facets = vars(manzil_id))+
+  #labs(title = "All Ayahs",
+   #      x = "Ayat No",
+    #     y = "Number of Characters")+
+  theme_bw()
+#ggplotly(p1)
+```
+
+
+```{r out.width="100%"}
+words<-strsplit(Arabic$text," ")
+Arabic$wordsCount<-lengths(words)
+str(words)
+table(Arabic$text) %>%
+  sort(decreasing = TRUE) %>%
+  #head()
+  ggplot()+
+    geom_point(alpha=0.1)
+
+ggplot(data = Arabic, aes(x=surat_id, y = words,color=manzil_id)) +
+  geom_point(alpha=0.1,aes(size=numberinsurat))+
+  #geom_line(alpha=0.3)+
+  #facet_wrap(facets = vars(manzil_id))+
+  #labs(title = "All Ayahs",
+   #      x = "Ayat No",
+    #     y = "Number of Characters")+
+  theme_bw()
+
+
+AllWords<-unlist(words)
+str(AllWords)
+concordance<-sort(table(AllWords),decreasing = TRUE)
+summary(concordance)
+plot(tail(concordance))
+```

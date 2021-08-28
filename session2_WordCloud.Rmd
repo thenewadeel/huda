@@ -1,0 +1,107 @@
+---
+title: "Project Al-Huda"
+output: html_document
+---
+
+> In continuation from [Session 1](https://rpubs.com/glasschakotra/huda1)
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(jsonlite)
+library(ggplot2)
+library(plotly)
+library(wordcloud2)
+library(tm)
+
+
+Surahs <- fromJSON("surat.json")
+Surahs<-Surahs$surat # The actual data is in the sub-object "surat"
+Surahs$revelationCity<-as.factor(Surahs$revelationCity)
+
+Arabic <- fromJSON("arabicAyahsSimple.json")
+# DATA CLEANUP
+Arabic<-Arabic$ayahs
+Arabic$id<-NULL
+Arabic$edition_id<-NULL
+Arabic$page_id<-NULL
+Arabic$hizbQuarter_id<-NULL
+#Arabic$id<-NULL
+#str(Arabic)
+#Arabic$text[1]
+#nchar(Arabic$text[1])
+Arabic$chars<-nchar(Arabic$text)
+#str(Arabic)
+#summary(Arabic)
+
+ayahWords<-strsplit(Arabic$text," ")
+Arabic$wordsCount<-lengths(ayahWords)
+#str(words)
+allWords<-unlist(ayahWords)
+#str(AllWords)
+#concordance<-sort(table(AllWords),decreasing = TRUE)
+
+```
+
+
+```{r out.width="100%"}
+# TODO
+#https://www.youtube.com/watch?v=0cToDzeDLRI
+# devtools::install_github("lchiffon/wordcloud2")
+
+
+
+# https://www.kaggle.com/dorianlazar/medium-articles-dataset?select=medium_data.csv
+#medium_csv = read_csv("medium_data.csv") %>%
+#  filter(publication == 'UX Collective')
+
+
+Arabic.corpus = Corpus(VectorSource(Arabic$text))
+
+#removeHTML = function(text){
+#  text = gsub(pattern = '<.+\\">', '', text)
+#  text = gsub(pattern = '</.+>', '', text)
+#  return(text)
+#}
+
+#Arabic.corpus = Arabic.corpus %>%
+#  tm_map(content_transformer(removeHTML)) %>%
+#  tm_map(removeNumbers) %>%
+#  tm_map(removePunctuation) %>%
+#  tm_map(stripWhitespace)   %>%
+#  tm_map(content_transformer(tolower)) %>%
+#  tm_map(removeWords, stopwords("english")) %>%
+#  tm_map(removeWords, stopwords("SMART")) 
+
+tdm = TermDocumentMatrix(Arabic.corpus) %>%
+  as.matrix()
+words = sort(rowSums(tdm), decreasing = TRUE)
+df = data.frame(word = names(words), freq = words)
+
+df = df %>%
+  filter(nchar(as.character(word)) > 2,
+         word != "don’")
+```
+
+```{r out.width="100%"}
+#https://fromsystosys.netlify.app/2019/03/03/color-palettes-inspired-by-islamic-art/
+#devtools::install_github("lambdamoses/IslamicArt")
+
+cloud.colors = c("#301d25", "#7a4d41", "#275238","#9c1839","#6ab668","#59d0ee","#6767f4","#d6273b","#fffb49","#e69975","#5a4239","#8d332a")
+cloud.background = "#d8cdbe"
+
+library(extrafont)
+# font_import()
+#fonts()
+
+wordcloud2(df,
+           color = rep_len(cloud.colors, nrow(df)),
+           backgroundColor = cloud.background,
+           fontFamily = "Titr",
+           size = 2.5,
+           minSize = 5,
+           rotateRatio = 0)
+
+```
