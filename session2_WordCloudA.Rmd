@@ -8,82 +8,90 @@ output: html_document
 
 ```{r setup, include=FALSE}
 
-knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
 library(jsonlite)
-library(ggplot2)
-library(plotly)
 library(wordcloud2)
 library(tm)
-
-
-Surahs <- fromJSON("surat.json")
-Surahs<-Surahs$surat # The actual data is in the sub-object "surat"
-Surahs$revelationCity<-as.factor(Surahs$revelationCity)
-
-Arabic <- fromJSON("englishAyahs.json")
-# DATA CLEANUP
-Arabic<-Arabic$ayahs
-Arabic$id<-NULL
-Arabic$edition_id<-NULL
-Arabic$page_id<-NULL
-Arabic$hizbQuarter_id<-NULL
-#Arabic$id<-NULL
-#str(Arabic)
-#Arabic$text[1]
-#nchar(Arabic$text[1])
-Arabic$chars<-nchar(Arabic$text)
-#str(Arabic)
-#summary(Arabic)
-
-ayahWords<-strsplit(Arabic$text," ")
-Arabic$wordsCount<-lengths(ayahWords)
-#str(words)
-allWords<-unlist(ayahWords)
-#str(AllWords)
-#concordance<-sort(table(AllWords),decreasing = TRUE)
-
 ```
 
+# Word Clouds
 
+Now let's load up all of the text of **Al-Quran** and make a word cloud.
+Wordclouds give a bird's eye view of any text.
+The size of every word is dictated by the number of occurrences.
+So the bigger the word, the more often it is mentioned in the text.
+
+## 1. Loading Text
+
+The `json` files I prepared earlier will be used now.
+
+* `arabicAyahs.json`    -   All Arabic text of Al-Quran in Uthmani text (with aeraab)
+* `arabicAyahsSimple.json`    -   All Arabic text of Al-Quran in simplified form (without aeraab)
+* `englishAyahs.json`   -   English Translation (Saheeh International Version)
+
+```{r include=TRUE}
+Arabic <- fromJSON("arabicAyahsSimple.json")$ayahs
+ArabicUthmani <- fromJSON("arabicAyahs.json")$ayahs
+English <- fromJSON("englishAyahs.json")$ayahs
+# The required text is encapsulated in the `ayahs` object within every `json` file.
+
+Arabic$text[1]
+ArabicUthmani$text[1]
+English$text[1]
+
+```
+## 2. Preparing Word-Frequency Dataframes
+
+This part is a bit hectic.
+It involves the following steps:
+
+1.    Preparing a Corpus
+2.    Generating a Term-Document Matrix
+3.    Composing a Data-Frame with word-freq variables
+
+All 3 types of inputs are handled separately now.
 ```{r out.width="100%"}
-# TODO
-#https://www.youtube.com/watch?v=0cToDzeDLRI
-# devtools::install_github("lchiffon/wordcloud2")
+Arabic<-filter(Arabic,surat_id>89)
+ArabicUthmani<-filter(ArabicUthmani,surat_id>89)
+English<-filter(English,surat_id>89)
 
+Arabic.corpus <- Corpus(VectorSource(Arabic$text),
+                       readerControl = list(language = "ar"))
+ArabicUthmani.corpus <- Corpus(VectorSource(ArabicUthmani$text),
+                              readerControl = list(language = "ar"))
+English.corpus <- Corpus(VectorSource(English$text),
+                        readerControl = list(language = "en"))
+```
 
+The 3 corpus objects now contain the required corpora.
+The English corpus needs a bit of work to remove certain insignificant words.
 
-# https://www.kaggle.com/dorianlazar/medium-articles-dataset?select=medium_data.csv
-#medium_csv = read_csv("medium_data.csv") %>%
-#  filter(publication == 'UX Collective')
-text_source<-filter(Arabic,surat_id>57)$text
+```{r message=FALSE, warning=FALSE}
 
-Arabic.corpus = Corpus(VectorSource(text_source),readerControl = list(language = "ar-Arab"))
-
-#removeHTML = function(text){
-#  text = gsub(pattern = '<.+\\">', '', text)
-#  text = gsub(pattern = '</.+>', '', text)
-#  return(text)
-#}
-
-Arabic.corpus = Arabic.corpus %>%
-#  tm_map(content_transformer(removeHTML)) %>%
-#  tm_map(removeNumbers) %>%
+English.corpus = English.corpus %>%
   tm_map(removePunctuation) %>%
-#  tm_map(stripWhitespace)   %>%
-#  tm_map(content_transformer(tolower)) %>%
   tm_map(removeWords, stopwords("english")) %>%
+  tm_map(removeWords, c("and","but","then","they")) %>%
   tm_map(removeWords, stopwords("SMART")) 
+```
 
+The corpora are now ready and can be used to generate a Term-Document matrix.
+
+```{r}
 tdm = TermDocumentMatrix(Arabic.corpus) %>%
   as.matrix()
+```
+
+This tdm can now be used to make a dataframe with word-frequency data.
+
+```{r}
 words = sort(rowSums(tdm), decreasing = TRUE)
 df = data.frame(word = names(words), freq = words)
 
-df = df %>%
-  filter(nchar(as.character(word)) > 2,
-         !(word %in% c("and","but","then","they")))
 ```
+
+## 3. Making The WordCloud
 
 ```{r out.width="100%"}
 #https://fromsystosys.netlify.app/2019/03/03/color-palettes-inspired-by-islamic-art/
