@@ -1,0 +1,77 @@
+---
+title: "Project Al-Huda"
+output: html_document
+---
+
+> In continuation from [Session 2](https://rpubs.com/glasschakotra/huda2)
+
+
+```{r setup, include=FALSE}
+
+#knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(jsonlite)
+library(wordcloud2)
+library(tm)
+library(extrafont)
+```
+
+# Word Clouds (Using Ayahs)
+
+Have you wondered about the ayahs that have been repeated in the Quran?
+Let's make a word cloud that shows repeating ayahs.
+
+## 1. Loading Text
+
+The `arabicAyahsSimple.json` file I prepared earlier will be used now.
+
+We'll be using the Arabic Simplified version for the sake of simplicity.
+
+```{r include=TRUE}
+Arabic <- fromJSON("arabicAyahsSimple.json")$ayahs
+# The required text is encapsulated in the `ayahs` object within every `json` file.
+
+```
+## 2. Preparing Ayah-Frequency Dataframes
+
+Preparing a data frame `keyAyahs` by using R's built-in `table()` function that counts all occurrences of the text.
+Then I convert it into a data frame using `as.data.frame()` function.
+Finally I apply a filter to only select ayahs that have occurred at least twice.
+Notice that now I'm using pipe operator `%>%` which makes life much easier.
+
+Once the data frame is ready, it is ordered so the high `freq` ayahs are on top.
+
+```{r out.width="100%"}
+#Arabic<-filter(Arabic,surat_id>89) 
+keyAyahs <- Arabic$text %>%
+  table() %>%
+  as.data.frame()%>%
+  filter(Freq>1) 
+keyAyahs$. <- as.character(keyAyahs$.)
+names(keyAyahs)<-c("Ayah","Freq")
+keyAyahs<-keyAyahs[order(-keyAyahs$Freq),]
+```
+
+## 3. Making The WordCloud
+
+Had a whole night fighting with the `wordcloud2` function.
+It turns out that the function omits higher frequency words to compensate for font-size.
+Anyways the output is beautiful.
+The most repeated ayah is from Surah Rehman and it is repeated 31 times.
+
+```{r out.width="100%"}
+# Colors inspired from : https://fromsystosys.netlify.app/2019/03/03/color-palettes-inspired-by-islamic-art/
+
+cloud.colors = c("#301d25", "#7a4d41", "#275238","#9c1839","#6ab668","#59d0ee","#6767f4","#d6273b","#fffb49","#e69975","#5a4239","#8d332a")
+cloud.background = "#d8cdbe"
+
+wordcloud2(keyAyahs,
+           color = rep_len(cloud.colors, nrow(keyAyahs)),
+           backgroundColor = cloud.background,
+           fontFamily = "Titr",
+           size = .6,
+           #minSize = 2,
+           
+           rotateRatio = 0)
+
+```
